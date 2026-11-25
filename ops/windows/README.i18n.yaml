@@ -3,5 +3,5 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write ops/windows/README.md
 /windows-source-manager:
-  en: 54025839b9585b1e
-  zh: 5d0211e9bc2b33a4
+  en: 06fdf5b475f20eb2
+  zh: 7ad6d76f72512de7
