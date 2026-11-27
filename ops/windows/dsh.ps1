@@ -120,7 +120,10 @@ $managerLock=New-Object Threading.Mutex($false,$lockName)
 $ownsLock=$false
 Push-Location $ProjectDirectory
 try {
-    try { $ownsLock=$managerLock.WaitOne(60000) } catch [Threading.AbandonedMutexException] { $ownsLock=$true }
+    # Polling must not queue behind an interactive build or block its own retry loop.
+    $lockWait=if($Supervised){0}else{60000}
+    try { $ownsLock=$managerLock.WaitOne($lockWait) } catch [Threading.AbandonedMutexException] { $ownsLock=$true }
+    if ($Supervised -and !$ownsLock) { return }
     if (!$ownsLock) { throw 'Another DSH manager operation is still running.' }
     switch($Action) {
         start { Start-ServiceProcess }
@@ -156,8 +159,8 @@ try {
             $shortcutPath=Join-Path ([Environment]::GetFolderPath('Startup')) 'DSH Web.lnk'
             $shortcut=(New-Object -ComObject WScript.Shell).CreateShortcut($shortcutPath)
             $shortcut.TargetPath=$Node
-            $watchdog=Join-Path $PSScriptRoot 'watchdog.mjs'
-            $shortcut.Arguments='"'+$watchdog+'" "'+$RuntimeDirectory+'"'
+            $supervisor=Join-Path $PSScriptRoot 'watchdog-supervisor.mjs'
+            $shortcut.Arguments='"'+$supervisor+'" "'+$RuntimeDirectory+'"'
             if($DirectNetwork){$shortcut.Arguments+=' --direct-network'}
             $shortcut.WorkingDirectory=$ProjectDirectory
             $shortcut.WindowStyle=7
